@@ -28,10 +28,9 @@ wiring = "\n".join([
 #Input IP addresses of devices used here
 station = qc.Station()
 
+#Visual network analyzer
 vna = N5222A("vna", "TCPIP0::192.168.100.73::inst0::INSTR")
 vna.electrical_delay(49.677512e-9)  # s
-# vna.electrical_delay(48.870785e-9)  # s
-# vna.electrical_delay(49.432255e-9)  # s
 vna.meas_trigger_input_type("level")
 vna.meas_trigger_input_polarity("positive")
 vna.aux1.output_polarity("negative")
@@ -41,13 +40,11 @@ station.add_component(vna)
 
 #qubit drive source
 drive_source:E82x7 = E82x7("drive_source", 'TCPIP0::192.168.100.7::inst0::INSTR')
-# # drive_source = N51xx("pump_source", 'TCPIP0::192.168.100.93::inst0::INSTR')
 drive_source.trigger_input_slope("positive")
 
-# #JPA pump source
-# pump_source = N51xx("pump_source", 'TCPIP0::192.168.100.9::inst0::INSTR')
-# pump_source:E82x7 = E82x7("pump_source", 'TCPIP0::192.168.100.7::inst0::INSTR')
-# pump_source.trigger_input_slope("positive")
+#JPA pump source
+pump_source = N51xx("pump_source", 'TCPIP0::192.168.100.9::inst0::INSTR')
+pump_source.trigger_input_slope("positive")
 
 #drive current source
 current_source = GS200("current_source", "TCPIP0::192.168.100.99::inst0::INSTR")
@@ -57,8 +54,9 @@ station.add_component(current_source)
 current_source2 = GS200("current_source2", "TCPIP0::192.168.100.95::inst0::INSTR")
 station.add_component(current_source2)
 
-#CW measurement related functions
 
+
+#CW measurement related functions
 def configure_drive_sweep(vna_freq: float, points: int):
     vna.sweep_type("linear frequency")
     vna.start(vna_freq)
