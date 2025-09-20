@@ -1,0 +1,155 @@
+import os
+
+import matplotlib.pyplot as plt
+import numpy as np
+from plottr.data.datadict_storage import DataDict, DDH5Writer
+from sequence_parser import Sequence, Variable, Variables
+from tqdm import tqdm
+from plottr.data.datadict_storage import search_datadict
+from setup_td import *
+from tomography_modeFunctionPrep import mode_function
+
+
+
+
+
+measurement_name = os.path.basename(__file__)[:-3]
+
+shot_count = 10000
+repetition = 3
+
+def photon_sequence_resetted(init_state, phase, draw_end = False):
+    sequence = Sequence([ge_drive_port,gf_drive_port, JPA_port, digi_port])
+    
+    #reset pulse resets to 1 state
+    sequence.add(Square(amplitude=gf_pi.params['amplitude'], duration=2000), gf_drive_port, copy = False)   #reset pulse
+    
+    #switches for initial states
+    if init_state == '0':
+        sequence.call(ge_flat_seq)
+
+    if init_state == '1':
+        sequence.add(Delay(duration= ge_flat_pi.params['top_duration'] + ge_pi.params['duration']), ge_drive_port, copy = False)
+
+    if init_state == '0+1':
+        sequence.call(ge_flat_halfpi_seq)
+
+    if init_state == '0-1':
+        sequence.add(VirtualZ(np.pi), ge_drive_port,copy = False)
+        sequence.call(ge_flat_halfpi_seq)
+        sequence.add(VirtualZ(-np.pi), ge_drive_port,copy = False)
+
+    if init_state == '0+i1':
+        sequence.add(VirtualZ(0.5 * np.pi), ge_drive_port,copy = False)
+        sequence.call(ge_flat_halfpi_seq)
+        sequence.add(VirtualZ(-0.5*np.pi), ge_drive_port,copy = False)
+
+    if init_state == '0+i1':
+        sequence.add(VirtualZ(-0.5 * np.pi), ge_drive_port,copy = False)
+        sequence.call(ge_flat_halfpi_seq)
+        sequence.add(VirtualZ(0.5*np.pi), ge_drive_port,copy = False)
+
+    
+    sequence.trigger([ge_drive_port,gf_drive_port,])
+    sequence.call(gf_pi_seq)
+
+    sequence.add(ResetPhase(phase = phase), JPA_port,copy = False)   
+    sequence.add(JPA_pulse, JPA_port, copy=False)   
+
+    # sequence.add(Delay(400), digi_port, copy=False)   
+    sequence.add(digi_acquire, digi_port, copy=False)  
+
+    if draw_end == True:
+        sequence.draw()
+        raise SyntaxError
+    
+    return sequence
+
+
+#phase relation check
+print(lo_2pho.frequency() * 2 - lo_readout.frequency())
+
+
+#Current set!
+current_source.ramp_current(0, step=5e-7, delay=0)
+current_source.off()
+
+current=100.78e-6
+
+current_source.on()
+current_source.ramp_current(current,5e-7,0.1)
+
+JPA_current_source.ramp_current(0, step=5e-7, delay=0)
+JPA_current_source.off()
+
+current_JPA=86e-6
+
+JPA_current_source.on()
+JPA_current_source.ramp_current(current_JPA,5e-7,0.1)
+
+
+data = DataDict(
+    shot=dict(),
+    p_shot=dict(axes=["shot"]),
+    q_shot = dict(axes=["shot"]),
+)
+data.validate()
+
+# we test for the density matrix of 0
+global_phase_shift = 0#np.pi/2
+sequence_p = photon_sequence_resetted(init_state='1', phase=0 +  global_phase_shift)
+sequence_q = photon_sequence_resetted(init_state='1', phase=np.pi + global_phase_shift )
+
+# print(mode_function)
+
+extra_reps = 50
+
+try:
+    with DDH5Writer(data, data_path, name=measurement_name) as writer:
+        writer.add_tag(tags)
+        writer.backup_file([__file__, setup_file])
+        writer.save_text("wiring.md", wiring)
+        writer.save_dict("station_snapshot.json", station.snapshot())
+
+        result_p = []
+        result_q = []
+
+        # for _ in tqdm(range(extra_reps)):
+        for state in ['0']:
+            
+            awg_1.flush_waveform()
+            awg_2.flush_waveform()
+
+            sequence_p = photon_sequence_resetted(init_state=state, phase=0 )
+    
+            load_sequence2(sequence_p,shot_count)
+            data_p = run2(sequence_p,JPA_TD = True)
+            data_p = mode_function * data_p
+            s11_p = demodulate(data_p, demodulation_if= readout_freq - readout_lo_freq)
+
+            awg_1.flush_waveform()
+            awg_2.flush_waveform()
+
+            sequence_q = photon_sequence_resetted(init_state=state, phase=np.pi )
+
+            load_sequence2(sequence_q,shot_count)
+            data_q = run2(sequence_q,JPA_TD = True)
+            data_q = mode_function * data_q
+            s11_q = demodulate(data_q)
+
+
+        writer.add_data(
+                shot=np.arange(shot_count),
+                p_shot=s11_p,
+                q_shot = s11_q,
+                )
+        
+finally: 
+    # off()
+    current_source.ramp_current(0, step=5e-7, delay=0)
+    current_source.off()
+    JPA_current_source.ramp_current(0, step=5e-7, delay=0)
+    JPA_current_source.off()
+
+    print('finished')
+
