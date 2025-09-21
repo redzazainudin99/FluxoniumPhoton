@@ -141,8 +141,8 @@ try:
         result_p = []
         result_q = []
 
-        for _ in tqdm(range(extra_reps)):
-            for state in ['0','1','0+1','0-1','0+i1','0-i1']:
+        for state in ['0','1','0+1','0-1','0+i1','0-i1']:
+            for _ in tqdm(range(extra_reps)):
                 
                 awg_1.flush_waveform()
                 awg_2.flush_waveform()
@@ -174,23 +174,86 @@ try:
             photon_result_q = result_q[:,int((windows[0][0] - windows[0][0])/digi_ch.sampling_interval()) :int((windows[0][1] - windows[0][0])/digi_ch.sampling_interval())]
             vacuum_result_q = result_q[:,int((windows[1][0] - windows[0][0])/digi_ch.sampling_interval()) :int((windows[1][1] - windows[0][0])/digi_ch.sampling_interval())]
 
+            photon_result_p = photon_result_p * mode_function
+            vacuum_result_p = vacuum_result_p * mode_function
+            photon_result_q = photon_result_q * mode_function
+            vacuum_result_q = vacuum_result_q * mode_function
 
-        photon_result_p = photon_result_p * mode_function
-        vacuum_result_p = vacuum_result_p * mode_function
-        photon_result_q = photon_result_q * mode_function
-        vacuum_result_q = vacuum_result_q * mode_function
+            a_photon_p = demodulate(photon_result_p, demodulation_if=readout_freq-readout_lo_freq)
+            a_vacuum_p = demodulate(vacuum_result_p, demodulation_if=readout_freq-readout_lo_freq)
+            a_photon_q = demodulate(photon_result_q, demodulation_if=readout_freq-readout_lo_freq)
+            a_vacuum_q = demodulate(vacuum_result_q, demodulation_if=readout_freq-readout_lo_freq)
 
-        a_photon_p = demodulate(photon_result_p, demodulation_if=readout_freq-readout_lo_freq)
-        a_vacuum_p = demodulate(vacuum_result_p, demodulation_if=readout_freq-readout_lo_freq)
-        a_photon_q = demodulate(photon_result_q, demodulation_if=readout_freq-readout_lo_freq)
-        a_vacuum_q = demodulate(vacuum_result_q, demodulation_if=readout_freq-readout_lo_freq)
+
+            #writing based on state
+            if state == '0':
+                    p_0=a_photon_p,
+                    p_0_vacuum=a_vacuum_p,
+                    q_0 = a_photon_q,
+                    q_0_vacuum = a_vacuum_q,
+
+            if state == '1':
+                    p_1=a_photon_p,
+                    p_1_vacuum=a_vacuum_p,
+                    q_1 = a_photon_q,
+                    q_1_vacuum = a_vacuum_q,
+
+            if state == '0+1':
+                    p_0plus1=a_photon_p,
+                    p_0plus1_vacuum=a_vacuum_p,
+                    q_0plus1 = a_photon_q,
+                    q_0plus1_vacuum = a_vacuum_q,
+
+            if state == '0-1':
+                    p_0minus1=a_photon_p,
+                    p_0minus1_vacuum=a_vacuum_p,
+                    q_0minus1 = a_photon_q,
+                    q_0minus1_vacuum = a_vacuum_q,
+            
+            if state == '0+i1':
+                    p_0plusi=a_photon_p,
+                    p_0plusi_vacuum=a_vacuum_p,
+                    q_0plusi = a_photon_q,
+                    q_0plusi_vacuum = a_vacuum_q,
+
+            if state == '0-i1':
+                    p_0minusi=a_photon_p,
+                    p_0minusi_vacuum=a_vacuum_p,
+                    q_0minusi = a_photon_q,
+                    q_0minusi_vacuum = a_vacuum_q,
 
         writer.add_data(
                     shot=np.arange(shot_count),
-                    p_shot=a_photon_p,
-                    p_shot_vacuum=a_vacuum_p,
-                    q_shot = a_photon_q,
-                    q_shot_vacuum = a_vacuum_q,
+
+                    p_0 = p_0,
+                    p_0_vacuum = p_0_vacuum,
+                    q_0 = q_0,
+                    q_0_vacuum = q_0_vacuum,
+
+                    p_1 = p_1,
+                    p_1_vacuum = p_1_vacuum,
+                    q_1 = q_1,
+                    q_1_vacuum = q_1_vacuum,
+
+                    p_0plus1 = p_0plus1,
+                    p_0plus1_vacuum = p_0plus1_vacuum,
+                    q_0plus1 = q_0plus1,
+                    q_0plus1_vacuum = q_0plus1_vacuum,
+
+                    p_0minus1 = p_0minus1,
+                    p_0minus1_vacuum = p_0minus1_vacuum,
+                    q_0minus1 = q_0minus1,
+                    q_0minus1_vacuum = q_0minus1_vacuum,
+
+                    p_0plusi = p_0plusi,
+                    p_0plusi_vacuum = p_0plusi_vacuum,
+                    q_0plusi = q_0plusi,
+                    q_0plusi_vacuum = q_0plusi_vacuum,
+
+                    p_0minusi = p_0minusi,
+                    p_0minusi_vacuum = p_0minusi_vacuum,
+                    q_0minusi = q_0minusi,
+                    q_0minusi_vacuum = q_0minusi_vacuum,
                 )
         
 finally: 
