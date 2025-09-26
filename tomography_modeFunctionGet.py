@@ -19,7 +19,7 @@ def photon_sequence (virtualz, phase, draw_end = False):
     sequence = Sequence([ge_drive_port,gf_drive_port, JPA_port, digi_port])
         
     #reset pulse resets to 1 state
-    sequence.add(Square(amplitude=gf_pi.params['amplitude'], duration=2000), gf_drive_port, copy = False)   #reset pulse
+    sequence.add(Square(amplitude=gf_pi.params['amplitude'], duration=5000), gf_drive_port, copy = False)   #reset pulse
     
     if virtualz ==True:
         sequence.add(VirtualZ(np.pi), ge_drive_port,copy = False)
@@ -51,7 +51,7 @@ current_source.ramp_current(0, step=5e-7, delay=0)
 current_source.off()
 
 
-current=100.78e-6
+current=100.8e-6
 
 current_source.on()
 current_source.ramp_current(current,5e-7,0.1)
@@ -62,7 +62,7 @@ current_source.ramp_current(current,5e-7,0.1)
 JPA_current_source.ramp_current(0, step=5e-7, delay=0)
 JPA_current_source.off()
 
-current_JPA=86e-6
+current_JPA=90.7e-6
 
 JPA_current_source.on()
 JPA_current_source.ramp_current(current_JPA,5e-7,0.1)
@@ -90,7 +90,7 @@ data.validate()
 
 #In cases where more than 60000 cycles are needed, repeat the measurements with this!
 # extra_reps = 500
-extra_reps = 250
+extra_reps = 50
 
 with DDH5Writer(data, data_path, name=measurement_name) as writer:
     writer.add_tag(tags)

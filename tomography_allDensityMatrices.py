@@ -22,8 +22,9 @@ def photon_sequence_resetted_wScaling(init_state, phase, draw_end = False):
     sequence = Sequence([ge_drive_port,gf_drive_port, JPA_port, digi_port])
     
     #reset pulse resets to 1 state
-    sequence.add(Square(amplitude=gf_pi.params['amplitude'], duration=2000), gf_drive_port, copy = False)   #reset pulse
-    
+    sequence.add(Square(amplitude=gf_pi.params['amplitude'], duration=5000), gf_drive_port, copy = False)   #reset pulse
+    # print('Done')
+    sequence.trigger([ge_drive_port,gf_drive_port,JPA_port, digi_port])
     #switches for initial states
     if init_state == '0':
         sequence.call(ge_flat_seq)
@@ -57,12 +58,13 @@ def photon_sequence_resetted_wScaling(init_state, phase, draw_end = False):
     sequence.add(JPA_pulse, JPA_port, copy=False)   
     sequence.add(digi_acquire, digi_port, copy=False)  
 
+    sequence.trigger([ge_drive_port,gf_drive_port,JPA_port, digi_port])
     sequence.add(Delay(100), digi_port, copy=False)
     
     sequence.trigger([ge_drive_port,gf_drive_port,JPA_port, digi_port])
-    sequence.add(ResetPhase(phase = phase), JPA_port,copy = False)   
-    sequence.add(JPA_pulse, JPA_port, copy=False)   
-    sequence.add(digi_acquire, digi_port, copy=False)  
+    sequence.add(ResetPhase(phase = phase), JPA_port,copy = True)   
+    sequence.add(JPA_pulse2, JPA_port, copy=False)   
+    sequence.add(digi_acquire2, digi_port, copy=False)  
    
 
     if draw_end == True:
@@ -71,6 +73,7 @@ def photon_sequence_resetted_wScaling(init_state, phase, draw_end = False):
     
     return sequence
 
+# photon_sequence_resetted_wScaling(init_state='1', phase=0, draw_end= True )
 
 #phase relation check
 print(lo_2pho.frequency() * 2 - lo_readout.frequency())
@@ -80,7 +83,7 @@ print(lo_2pho.frequency() * 2 - lo_readout.frequency())
 current_source.ramp_current(0, step=5e-7, delay=0)
 current_source.off()
 
-current=100.78e-6
+current=100.8e-6
 
 current_source.on()
 current_source.ramp_current(current,5e-7,0.1)
@@ -88,7 +91,7 @@ current_source.ramp_current(current,5e-7,0.1)
 JPA_current_source.ramp_current(0, step=5e-7, delay=0)
 JPA_current_source.off()
 
-current_JPA=86e-6
+current_JPA=90.7e-6
 
 JPA_current_source.on()
 JPA_current_source.ramp_current(current_JPA,5e-7,0.1)
@@ -129,7 +132,7 @@ data = DataDict(
 
 data.validate()
 
-extra_reps = 1
+extra_reps = 3
 
 try:
     with DDH5Writer(data, data_path, name=measurement_name) as writer:
@@ -138,21 +141,21 @@ try:
         writer.save_text("wiring.md", wiring)
         writer.save_dict("station_snapshot.json", station.snapshot())
 
-        result_p = []
-        result_q = []
 
         for state in ['0','1','0+1','0-1','0+i1','0-i1']:
+            result_p = []
+            result_q = []
             for _ in tqdm(range(extra_reps)):
                 
                 awg_1.flush_waveform()
                 awg_2.flush_waveform()
 
                 sequence_p = photon_sequence_resetted_wScaling(init_state=state, phase=0 )
-        
+                
                 load_sequence2(sequence_p,shot_count)
                 data_p = run2(sequence_p,JPA_TD = True) * voltage_step
                 result_p = np.append(result_p, data_p)
-
+                # print('Done_p')
                 awg_1.flush_waveform()
                 awg_2.flush_waveform()
 
@@ -161,6 +164,7 @@ try:
                 load_sequence2(sequence_q,shot_count)
                 data_q = run2(sequence_q,JPA_TD = True) * voltage_step
                 result_q = np.append(result_q, data_q)
+                # print('Done_q')
 
                         
             result_q = result_q.reshape(int(extra_reps*shot_count), int(digi_ch.points_per_cycle()))
