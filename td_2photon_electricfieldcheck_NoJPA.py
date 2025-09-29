@@ -13,8 +13,12 @@ from tqdm import tqdm
 
 measurement_name = os.path.basename(__file__)[:-3]
 
+JPA_port.if_freq = JPA_port.if_freq #+ 0.006
 
-def photon_sequence (virtualz, phase, draw_end = False):
+
+
+def photon_sequence (virtualz, draw_end = False):
+    
     sequence = Sequence([ge_drive_port,gf_drive_port, JPA_port, digi_port])
     sequence.add(Delay(500), ge_drive_port, copy=False)   
     if virtualz ==True:
@@ -24,9 +28,6 @@ def photon_sequence (virtualz, phase, draw_end = False):
         sequence.add(VirtualZ(-np.pi), ge_drive_port,copy = False)
     sequence.trigger([ge_drive_port,gf_drive_port,])
     sequence.call(gf_pi_seq)
-
-    sequence.add(ResetPhase(phase = phase), JPA_port,copy = False)   
-    sequence.add(JPA_pulse, JPA_port, copy=False)   
 
     sequence.add(Delay(400), digi_port, copy=False)   
     sequence.add(digi_acquire, digi_port, copy=False)  
@@ -39,23 +40,13 @@ def photon_sequence (virtualz, phase, draw_end = False):
 
 # seq = photon_sequence(virtualz=True, phase = 0, draw_end = True)
 
-drive_pulse_duration = 5000
+drive_pulse_duration = 20000
 
 JPA_pulse.params['duration'] = drive_pulse_duration + 3000
 digi_acquire.params['duration'] = drive_pulse_duration + 3000
 
-
-
-
-
-amplitude = Variable("amplitude", np.linspace(0.,1.12,51), "V")
-# duration = Variable("duration",[10,90,100,170], "ns")
-variables = Variables([amplitude])
-
-
-
 ####GF PULSE PARAMS###
-gf_pi.params['amplitude'] = amplitude
+gf_pi.params['amplitude'] = 1.2
 gf_pi_flat.params['top_duration'] = drive_pulse_duration
 
 # gf_freq = 2.8
@@ -77,7 +68,7 @@ print(lo_2pho.frequency() * 2 - lo_readout.frequency())
 current_source.ramp_current(0, step=5e-7, delay=0)
 current_source.off()
 
-current= 100.8e-6
+current=28.88e-6
 
 current_source.on()
 current_source.ramp_current(current,5e-7,0.1)
@@ -90,7 +81,7 @@ ge_lo_freq=0
 JPA_current_source.ramp_current(0, step=5e-7, delay=0)
 JPA_current_source.off()
 
-current_JPA= 90.7e-6
+current_JPA=-94.8e-6
 
 JPA_current_source.on()
 JPA_current_source.ramp_current(current_JPA,5e-7,0.1)
@@ -102,23 +93,19 @@ points_per_cycle = 10000
 time = np.arange(points_per_cycle) * digi_ch.sampling_interval()
 
 data = DataDict(
-        emission_amplitude=dict(unit="V"),
+        emission_frequency=dict(unit="GHz"),
         time=dict(unit="ns"),
-        waveform=dict(axes=["emission_amplitude", "time"], unit="V"),
-        wave_I=dict(axes=["emission_amplitude", "time"], unit="V"),
-        wave_Q=dict(axes=["emission_amplitude", "time"], unit="V"),
-        g_plus_e_I=dict(axes=["emission_amplitude", "time"], unit="V"),
-        g_minus_e_I=dict(axes=["emission_amplitude", "time"], unit="V"),
-        g_plus_e_Q=dict(axes=["emission_amplitude", "time"], unit="V"),
-        g_minus_e_Q=dict(axes=["emission_amplitude", "time"], unit="V"),
+        waveform=dict(axes=["emission_frequency", "time"], unit="V"),
+        g_plus_e=dict(axes=["emission_frequency", "time"], unit="V"),
+        g_minus_e=dict(axes=["emission_frequency", "time"], unit="V"),
     )
 
 
 data.validate()
 
 #In cases where more than 60000 cycles are needed, repeat the measurements with this!
-# extra_reps = 500
-extra_reps = 50
+# extra_reps = 4000
+extra_reps = 100
 
 with DDH5Writer(data, data_path, name=measurement_name) as writer:
     writer.add_tag(tags)
@@ -126,40 +113,30 @@ with DDH5Writer(data, data_path, name=measurement_name) as writer:
     writer.save_text("wiring.md", wiring)
     writer.save_dict("station_snapshot.json", station.snapshot())
 
-    for update_command in tqdm(variables.update_command_list):         
-        g_plus_e_I=[]
-        g_plus_e_Q=[]
-        g_minus_e_I=[]
-        g_minus_e_Q=[]
+    for f in tqdm(gf_freqs):
+        gf_drive_port.if_freq = f -gf_lo_freq
+        g_plus_e = []
+        g_minus_e = []
 
         for _ in  tqdm(range(extra_reps)):
-            for state in ["0+1_i", "0+1_q", "0-1_i", "0-1_q"]:
+            for state in ["0+1", "0-1"]:
                 awg_1.flush_waveform()
                 awg_2.flush_waveform()
-                if state=="0-1_i":
-                    seq = photon_sequence(virtualz=True, phase=0)
-                if state=="0-1_q":
-                    seq = photon_sequence(virtualz=True, phase= np.pi)
-                if state=="0+1_i":
-                    seq = photon_sequence(virtualz=False, phase=0 * np.pi)
-                if state=="0+1_q":
-                    seq = photon_sequence(virtualz=False, phase= np.pi)
-                seq.update_variables(update_command)
-                load_sequence2(seq, cycles=20000)
-                data = run2(seq, plot = 0, JPA_TD = True).mean(axis=0) * voltage_step
-                if state=="0+1_i": g_plus_e_I = np.append(g_plus_e_I, data)
-                if state=="0+1_q": g_plus_e_Q = np.append(g_plus_e_Q, data)
-                if state=="0-1_i": g_minus_e_I = np.append(g_minus_e_I, data)
-                if state=="0-1_q": g_minus_e_Q = np.append(g_minus_e_Q, data)
+                if state=="0-1":
+                    seq = photon_sequence(virtualz=True)
+                if state=="0+1":
+                    seq = photon_sequence(virtualz=False)
+                load_sequence2(seq, cycles=40000)
+                data = run2(seq, plot = 0, JPA_TD = False).mean(axis=0) * voltage_step
+                if state=="0+1": g_plus_e = np.append(g_plus_e, data)
+                if state=="0-1": g_minus_e = np.append(g_minus_e, data)
         
         
-        g_plus_e_I = g_plus_e_I.reshape(int(extra_reps * 20000), int(digi_ch.points_per_cycle())).mean(axis=0)
-        g_plus_e_Q = g_plus_e_Q.reshape(int(extra_reps * 20000), int(digi_ch.points_per_cycle())).mean(axis=0)
-        g_minus_e_I = g_minus_e_I.reshape(int(extra_reps * 20000), int(digi_ch.points_per_cycle())).mean(axis=0)
-        g_minus_e_Q = g_minus_e_Q.reshape(int(extra_reps * 20000), int(digi_ch.points_per_cycle())).mean(axis=0)
-        waveform_I = (g_plus_e_I - g_minus_e_I) / 2
-        waveform_Q = (g_plus_e_Q - g_minus_e_Q) / 2
-        waveform = (waveform_I + waveform_Q) / 2
+        g_plus_e = g_plus_e.reshape(int(extra_reps), int(digi_ch.points_per_cycle())).mean(axis=0)
+        g_minus_e = g_minus_e.reshape(int(extra_reps), int(digi_ch.points_per_cycle())).mean(axis=0)
+
+        waveform = (g_plus_e - g_minus_e) / 2
+
         
         
         # digi_ch.delay(0)
@@ -167,15 +144,11 @@ with DDH5Writer(data, data_path, name=measurement_name) as writer:
 
 
         writer.add_data(
-                    emission_amplitude=seq.variable_dict["amplitude"][0].value,
+                    emission_frequency=f,
                     time=np.arange(len(waveform)) * digi_ch.sampling_interval(),
                     waveform=waveform,
-                    wave_I = waveform_I,
-                    wave_Q = waveform_Q,
-                    g_plus_e_I=g_plus_e_I,
-                    g_minus_e_I=g_minus_e_I,
-                    g_plus_e_Q=g_plus_e_Q,
-                    g_minus_e_Q=g_minus_e_Q,
+                    g_plus_e=g_plus_e,
+                    g_minus_e=g_minus_e,
                 )
 
 

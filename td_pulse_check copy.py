@@ -14,43 +14,21 @@ from setup_td import *
 measurement_name = os.path.basename(__file__)[:-3]
 readout_phase = ResetPhase(phase=0)
 # readout_pulse = ReverseExp(amplitude=1, duration=15000)      
-readout_pulse = Square(amplitude=0.25, duration=15000)
+readout_pulse = Square(amplitude=1, duration=1500)
 digi_acquire = Acquire(duration = readout_pulse.params["duration"]+ 6000)         #pulse input into digiitizer
 # readout_acquire = Acquire(duration=15000)
 
-# readout_seq = Sequence([readout_port, JPA_port, digi_port])
+readout_seq = Sequence([readout_port, JPA_port, digi_port])
 
-# readout_seq.trigger([readout_port,  JPA_port,digi_port])
-
-readout_seq = Sequence([readout_port, digi_port])
-
-readout_seq.trigger([readout_port, digi_port])
+readout_seq.trigger([readout_port,  JPA_port,digi_port])
 
 # readout_seq.add(ReverseExp(amplitude=0.4, duration=1200),readout_port, copy=False )
-# readout_seq.add(Delay(1000), readout_port)
-# readout_seq.add(readout_pulse, readout_port, copy=False)
-# readout_seq.add(JPA_pulse, JPA_port, copy=False)     
-# readout_seq.add(readout_phase, readout_port, copy=False)
-# readout_seq.add(digi_acquire, digi_port, copy=False)                             #this is the digiitizer input, which is the reflected readout pulse
-# readout_seq.trigger([readout_port,  JPA_port, digi_port])
-# readout_seq.add(Delay(10), readout_port)
-
-
-# readout_seq.add(Square(amplitude=0.4, duration=1200),readout_port, copy=False )
-# readout_seq.add(Delay(1000), readout_port)
-# readout_seq.add(readout_pulse, readout_port, copy=False)
-# readout_seq.add(readout_phase, readout_port, copy=False)
-# readout_seq.add(digi_acquire, digi_port, copy=False)                             #this is the digiitizer input, which is the reflected readout pulse
-# readout_seq.trigger([readout_port,  digi_port])
-# readout_seq.add(Delay(10), readout_port)
-
-
-# readout_seq.add(Gaussian(amplitude=0.4, fwhm = 500, duration=1200),readout_port, copy=False )
 readout_seq.add(Delay(1000), readout_port)
 readout_seq.add(readout_pulse, readout_port, copy=False)
+readout_seq.add(JPA_pulse, JPA_port, copy=False)     
 readout_seq.add(readout_phase, readout_port, copy=False)
 readout_seq.add(digi_acquire, digi_port, copy=False)                             #this is the digiitizer input, which is the reflected readout pulse
-readout_seq.trigger([readout_port,  digi_port])
+readout_seq.trigger([readout_port,  JPA_port, digi_port])
 readout_seq.add(Delay(10), readout_port)
 
 # readout_pulse.params["amplitude"] = 1

@@ -14,16 +14,15 @@ with open(__file__) as file:
 
 measurement_name = os.path.basename(__file__)
 
-amplitude = Variable("amplitude", np.linspace(0.,1.4,101), "V")
+duration = Variable("duration", 10*np.arange(200)+ 10, "ns")
 # duration = Variable("duration",[10,90,100,170], "ns")
-variables = Variables([amplitude])
+variables = Variables([duration])
 
-# ge_flat_pi.params["duration"] = duration
-ge_pi.params["amplitude"] = amplitude
-# JPA_phase.params['phase'] = 0.33*np.pi# phase
+ge_flat_pi.params["duration"] = duration
+# ge_flat_pi.params["amplitude"] = 0
 
 sequence = Sequence([readout_port, ge_drive_port, JPA_port, digi_port])
-for _ in range(2):
+for _ in range(1):
     sequence.call(ge_flat_seq)
 sequence.trigger([readout_port, ge_drive_port,JPA_port ,digi_port])
 sequence.call(readout_seq_JPA)
@@ -35,7 +34,7 @@ sequence.call(readout_seq_JPA)
 current_source.ramp_current(0, step=5e-7, delay=0)
 current_source.off()
 
-current = 100.8e-6
+current=101.3e-6
 
 current_source.on()
 current_source.ramp_current(current,5e-7,0.1)
@@ -45,7 +44,7 @@ current_source.ramp_current(current,5e-7,0.1)
 JPA_current_source.ramp_current(0, step=5e-7, delay=0)
 JPA_current_source.off()
 
-current_JPA= 90.7e-6
+current_JPA=84e-6
 
 JPA_current_source.on()
 JPA_current_source.ramp_current(current_JPA,5e-7,0.1)
@@ -53,8 +52,8 @@ JPA_current_source.ramp_current(current_JPA,5e-7,0.1)
 
 
 data = DataDict(
-    amplitude=dict(unit="V"),
-    s11=dict(axes=["amplitude"])
+    duration=dict(unit="ns"),
+    s11=dict(axes=["duration"])
 )
 data.validate() 
 
@@ -67,11 +66,11 @@ try:
         writer.save_dict("station_snapshot.json", station.snapshot())
         for update_command in tqdm(variables.update_command_list):         
             sequence.update_variables(update_command)
-            load_sequence2(sequence, cycles=30000)
+            load_sequence2(sequence, cycles=60000)
             data = run2(sequence, JPA_TD=True).mean(axis=0)
             s11 = demodulate(data)
             writer.add_data(
-                amplitude = sequence.variable_dict["amplitude"][0].value,
+                duration = sequence.variable_dict["duration"][0].value,
                 s11 = s11,
             )
 

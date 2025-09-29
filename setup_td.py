@@ -56,7 +56,7 @@ wiring = "\n".join([
 electrical_delay = 42e-9  # sec
 # readout_freq = 10.5165 # GHz
 
-readout_freq = 5.3489 # GHz
+readout_freq = 5.307 # GHz
 # readout_freq = 5.3809 # GHz
 # readout_freq = 4.3364 # GHz
 readout_lo_freq =readout_freq + 0.14 #GHz
@@ -64,19 +64,19 @@ readout_if_freq = readout_lo_freq - readout_freq
 ###drive parameters
 
 #ge transition parameters
-ge_freq=0.2536 #GHz
+ge_freq=0.2915  #GHz
 ge_lo_freq = 0.0#GHz
 ge_if_freq = ge_freq - ge_lo_freq
 # ge_if_freq = 0.265
 
 #ef transition parameters
-ef_freq = 2.8 #GHz
+ef_freq = 2.8071 #GHz
 ef_lo_freq = ef_freq + 0.124 #GHz 
 ef_if_freq = ef_freq - ef_lo_freq
 
 
 #gf transition parameters
-gf_freq = 2.8212 #GHz
+gf_freq = 2.7988 #GHz
 # gf_lo_freq = gf_freq + 0.124 #GHz
 gf_lo_freq = readout_lo_freq/2 
 gf_if_freq = gf_freq - gf_lo_freq
@@ -132,10 +132,11 @@ readout_seq.add(Delay(0), readout_port, copy = False)                           
 readout_seq_JPA = Sequence([readout_port, digi_port,JPA_port])                                  
 
 #defining singular pulses
-readout_pulse = Square(amplitude=0.45, duration= 15000)               #readout pulse
-digi_acquire = Acquire(duration = readout_pulse.params["duration"])         #pulse input into digiitizer
+readout_pulse = Square(amplitude=0.1, duration= 15000)               #readout pulse
+digi_acquire = Acquire(duration = readout_pulse.params["duration"] + 1000)         #pulse input into digiitizer 
 JPA_phase = ResetPhase(phase =0.5* np.pi)
-JPA_pulse = Square(amplitude=1., duration= 15000)    
+JPA_pulse = Square(amplitude=1.4, duration= 15000)    
+  
 
 #adding pulses to the sequence
 # readout_seq.trigger([readout_port, digi_port])                                                  #trigger pulse syncs the pulses across the ports
@@ -147,6 +148,17 @@ readout_seq_JPA.add(JPA_pulse, JPA_port, copy=False)                            
 readout_seq_JPA.add(digi_acquire, digi_port, copy=False)                             #this is the digiitizer input, which is the reflected readout pulse
 readout_seq_JPA.trigger([readout_port, digi_port, JPA_port])                                  #syncs the readout and digiitizer pulses
 readout_seq_JPA.add(Delay(0), readout_port, copy = False)                                        #adds a delay pulse for good measure
+
+
+
+#for tomography
+digi_acquire_tomo = Acquire(duration = 1200)         #pulse input into digiitizer 
+JPA_phase_tomo = ResetPhase(phase =0.5* np.pi)
+JPA_pulse_tomo = Square(amplitude=1.1, duration= 1200)    
+
+#for scaling measurements of the vacuum at the end of the tomography measurements
+digi_acquire2 = Acquire(duration = 1200)   
+JPA_pulse2 = Square(amplitude=1.1, duration= 1200) 
 
 
 # ##GE pi pulse
@@ -162,13 +174,13 @@ readout_seq_JPA.add(Delay(0), readout_port, copy = False)                       
 
 
 #GE flat-top gaussian
-ge_pi = Gaussian(amplitude=0.75, fwhm=20, duration=30, zero_end=True)    
+ge_pi = Gaussian(amplitude=0.35, fwhm=20, duration=30, zero_end=True)    
 #initializing pulse sequence
 ge_flat_seq = Sequence([ge_drive_port])                                  
 
 #defining singular pulses
 # ge_flat_pi  = Square(amplitude=0.4, duration= 30)
-ge_flat_pi  = FlatTop(ge_pi , top_duration= 30)      #standard pi pulse
+ge_flat_pi  = FlatTop(ge_pi , top_duration= 100)      #standard pi pulse
 # ge_flat_pulse_drag = HalfDRAG(ge_flat_pi, beta=0)                            #correction with DRAG
 
 #adding pulses to the sequence
@@ -207,16 +219,16 @@ ge_flat_halfpi_seq2.add(ge_flat_halfpi2, ge_drive_port,copy=False)
 
 
 
-##GE half pi
-#initializing pulse sequence
-ge_half_pi_seq = Sequence()                                  
+# ##GE half pi
+# #initializing pulse sequence
+# ge_half_pi_seq = Sequence()                                  
 
-#defining singular pulses
-ge_half_pi = Gaussian(amplitude=ge_pi.params['amplitude']/2, fwhm=12, duration=40, zero_end=True)    #standard pi pulse
-ge_half_pi_pulse_drag = HalfDRAG(ge_half_pi, beta=-0.1404)                                           #correction with DRAG
+# #defining singular pulses
+# ge_half_pi = Gaussian(amplitude=ge_pi.params['amplitude']/2, fwhm=12, duration=40, zero_end=True)    #standard pi pulse
+# ge_half_pi_pulse_drag = HalfDRAG(ge_half_pi, beta=-0.1404)                                           #correction with DRAG
 
-#adding pulses to the sequence
-ge_half_pi_seq.add(ge_half_pi_pulse_drag, ge_drive_port, copy=False)
+# #adding pulses to the sequence
+# ge_half_pi_seq.add(ge_half_pi_pulse_drag, ge_drive_port, copy=False)
 
 
 
@@ -251,7 +263,7 @@ ef_half_pi_seq.add(ef_half_pi_pulse_drag, ef_drive_port, copy=False)
 gf_pi_seq = Sequence()                                  
 
 #defining singular pulses
-gf_pi = RaisedCos(amplitude=0.2, duration= 40)    #standard pi pulse
+gf_pi = RaisedCos(amplitude=0.315, duration= 40)    #standard pi pulse
 gf_pi_flat = FlatTop(gf_pi, top_duration = 3000)
 # gf_pi_pulse_drag = HalfDRAG(gf_pi, beta=0)                            #correction with DRAG
 
@@ -306,8 +318,6 @@ station.add_component(current_source)
 
 JPA_current_source = GS200("current_source2", "TCPIP0::192.168.100.95::inst0::INSTR")
 station.add_component(JPA_current_source)
-
-current_JPA=-93e-6
 
 
 #AWGs
@@ -412,8 +422,8 @@ iq_corrector_JPA  = IQCorrector(
     awg_JPA_I,
     awg_JPA_Q,
     "D:\Redza\Logs\IQ_calibration",
-    lo_leakage_datetime="2025-09-10T165906",
-    rf_power_datetime="2025-09-10T170239",
+    lo_leakage_datetime="2025-09-21T171611",
+    rf_power_datetime="2025-09-21T172011",
     len_kernel=41,
     fit_weight=10,
     plot=False,
@@ -421,12 +431,12 @@ iq_corrector_JPA  = IQCorrector(
 # plt.show()
 
 
-iq_corrector_2photon =  IQCorrector(
+iq_corrector_2photon = IQCorrector(
     awg_2photon_I,
     awg_2photon_Q,
     "D:\Redza\Logs\IQ_calibration",
-    lo_leakage_datetime="2025-09-11T122304",
-    rf_power_datetime="2025-09-11T122555",
+    lo_leakage_datetime="2025-09-21T205956",
+    rf_power_datetime="2025-09-21T210309",
     len_kernel=41,
     fit_weight=10,
     plot=False,

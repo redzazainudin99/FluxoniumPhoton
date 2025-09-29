@@ -20,7 +20,16 @@ shot_count = 10000
 
 def photon_sequence_resetted_wScaling(init_state, phase, draw_end = False):
     sequence = Sequence([ge_drive_port,gf_drive_port, JPA_port, digi_port])
-    
+
+    #reset pulse resets to 1 state
+    sequence.add(Square(amplitude=gf_pi.params['amplitude'], duration=5000), gf_drive_port, copy = False)   #reset pulse
+    sequence.add(Delay(100), digi_port, copy=False)
+    #Measure first
+    sequence.trigger([ge_drive_port,gf_drive_port,JPA_port, digi_port])
+    sequence.add(ResetPhase(phase = phase), JPA_port,copy = True)   
+    sequence.add(JPA_pulse2, JPA_port, copy=False)   
+    sequence.add(digi_acquire2, digi_port, copy=False)  
+    sequence.trigger([ge_drive_port,gf_drive_port,JPA_port, digi_port])
     #reset pulse resets to 1 state
     sequence.add(Square(amplitude=gf_pi.params['amplitude'], duration=5000), gf_drive_port, copy = False)   #reset pulse
     # print('Done')
@@ -76,15 +85,7 @@ def photon_sequence_resetted_wScaling(init_state, phase, draw_end = False):
     sequence.add(digi_acquire_tomo, digi_port, copy=False)  
 
     sequence.trigger([ge_drive_port,gf_drive_port,JPA_port, digi_port])
-    #reset pulse resets to 1 state
-    sequence.add(Square(amplitude=gf_pi.params['amplitude'], duration=5000), gf_drive_port, copy = False)   #reset pulse
-    sequence.add(Delay(100), digi_port, copy=False)
     
-    sequence.trigger([ge_drive_port,gf_drive_port,JPA_port, digi_port])
-    sequence.add(ResetPhase(phase = phase), JPA_port,copy = True)   
-    sequence.add(JPA_pulse2, JPA_port, copy=False)   
-    sequence.add(digi_acquire2, digi_port, copy=False)  
-   
 
     if draw_end == True:
         sequence.draw()
@@ -197,10 +198,10 @@ try:
             #defining acquire windows
             windows = digi_port.measurement_windows
 
-            photon_result_p = result_p[:,int((windows[0][0] - windows[0][0])/digi_ch.sampling_interval()) :int((windows[0][1] - windows[0][0])/digi_ch.sampling_interval())]
-            vacuum_result_p = result_p[:,int((windows[1][0] - windows[0][0])/digi_ch.sampling_interval()) :int((windows[1][1] - windows[0][0])/digi_ch.sampling_interval())]
-            photon_result_q = result_q[:,int((windows[0][0] - windows[0][0])/digi_ch.sampling_interval()) :int((windows[0][1] - windows[0][0])/digi_ch.sampling_interval())]
-            vacuum_result_q = result_q[:,int((windows[1][0] - windows[0][0])/digi_ch.sampling_interval()) :int((windows[1][1] - windows[0][0])/digi_ch.sampling_interval())]
+            photon_result_p = result_p[:,int((windows[1][0] - windows[0][0])/digi_ch.sampling_interval()) :int((windows[1][1] - windows[0][0])/digi_ch.sampling_interval())]
+            vacuum_result_p = result_p[:,int((windows[0][0] - windows[0][0])/digi_ch.sampling_interval()) :int((windows[0][1] - windows[0][0])/digi_ch.sampling_interval())]
+            photon_result_q = result_q[:,int((windows[1][0] - windows[0][0])/digi_ch.sampling_interval()) :int((windows[1][1] - windows[0][0])/digi_ch.sampling_interval())]
+            vacuum_result_q = result_q[:,int((windows[0][0] - windows[0][0])/digi_ch.sampling_interval()) :int((windows[0][1] - windows[0][0])/digi_ch.sampling_interval())]
 
             photon_result_p = photon_result_p * mode_function
             vacuum_result_p = vacuum_result_p * mode_function

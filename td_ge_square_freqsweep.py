@@ -14,34 +14,20 @@ with open(__file__) as file:
 
 measurement_name = os.path.basename(__file__)
 
-freq_vals = np.linspace(0.26,0.34,101)
-# freq_vals = np.linspace(0.1,0.3,2)
+freq_vals = np.linspace(0.25,0.3,101)
 
-delay = 7000
-
-# sequence = Sequence([readout_port, ge_drive_port, JPA_port, digi_port])
-# # sequence.trigger([readout_port, ge_drive_port,JPA_port, digi_port])
-# sequence.add(Square(amplitude=0.5,duration= 8000),ge_drive_port,copy=False)
-# sequence.trigger([readout_port, ge_drive_port, digi_port,JPA_port])
-# # sequence.add(Square(amplitude=1., duration=15000), JPA_port)
-# sequence.call(JPA_square_seq)
+sequence = Sequence([readout_port, ge_drive_port, digi_port])
+sequence.trigger([readout_port, ge_drive_port, digi_port])
+sequence.add(Square(amplitude=0.3,duration= 15000),ge_drive_port,copy=False)
+sequence.trigger([readout_port, ge_drive_port, digi_port])
 # sequence.call(readout_seq)
-# # sequence.add(Delay(duration= delay), readout_port)
-
-sequence = Sequence([readout_port, ge_drive_port, JPA_port, digi_port])
-# sequence.trigger([readout_port, ge_drive_port,JPA_port, digi_port])
-sequence.add(Square(amplitude=0.2,duration= 15000),ge_drive_port,copy=False)
-sequence.trigger([readout_port, ge_drive_port, digi_port,JPA_port])
-# sequence.add(Square(amplitude=1., duration=15000), JPA_port)
-# sequence.call(JPA_square_seq)
-sequence.call(readout_seq_JPA)
-# sequence.add(Delay(duration= delay), readout_port)
-
-# sequence.draw()
-# raise SystemError
+sequence.add(ResetPhase(0), readout_port)   
+sequence.add(Square(amplitude=0.05,duration = 15000), readout_port, copy=False)
+sequence.add(Acquire(duration =17000)  , digi_port, copy=False) 
+print(sequence.port_list)
 
 data = DataDict(
-    frequency=dict(unit="Hz"),
+    frequency=dict(unit="MHz"),
     s11=dict(axes=["frequency"])
 )
 data.validate()
@@ -53,7 +39,7 @@ data.validate()
 current_source.ramp_current(0, step=5e-7, delay=0)
 current_source.off()
 
-current=100.8e-6
+current=101.4e-6
 
 current_source.on()
 current_source.ramp_current(current,5e-7,0.1)
@@ -62,25 +48,25 @@ current_source.ramp_current(current,5e-7,0.1)
 ge_lo_freq=0
 
 
-#Continuous JPA amplification setup here!
-JPA_current_source.ramp_current(0, step=5e-7, delay=0)
-JPA_current_source.off()
+# #Continuous JPA amplification setup here!
+# JPA_current_source.ramp_current(0, step=5e-7, delay=0)
+# JPA_current_source.off()
 
-current_JPA=90.7e-6
+# current_JPA=-94.8e-6
 
-JPA_current_source.on()
-JPA_current_source.ramp_current(current_JPA,5e-7,0.1)
+# JPA_current_source.on()
+# JPA_current_source.ramp_current(current_JPA,5e-7,0.1)
 
-#JPA LO setup
+# #JPA LO setup
 
 # lo_JPA = N51xx('lo_JPA', 'TCPIP0::192.168.100.9::inst0::INSTR')
-# lo_JPA = E82x7('lo_JPA', 'TCPIP0::192.168.100.7::inst0::INSTR')
-# lo_JPA.power(-5.5)
-# print(readout_if_freq)
-# lo_JPA.frequency(readout_freq*2*1e9)
-# station.add_component(lo_JPA)
-# lo_JPA.output(False)
-# lo_JPA.output(True)
+# # lo_JPA = E82x7('lo_JPA', 'TCPIP0::192.168.100.7::inst0::INSTR')
+# lo_JPA.power(-5)
+# # print(readout_if_freq)
+# lo_JPA.frequency(readout_freq*2*1e9 + 0.00e9)
+# # station.add_component(lo_JPA)
+# # lo_JPA.output(False)
+# # lo_JPA.output(True)
 
 
 try:
@@ -95,16 +81,16 @@ try:
             ge_drive_port.if_freq = f
             # print(ge_drive_port.if_freq)
             load_sequence2(sequence, cycles=30000)
-            data = run2(sequence, plot=0,JPA_TD = True).mean(axis=0)
+            data = run2(sequence, plot=0).mean(axis=0)
             writer.add_data(
                 frequency = f,
                 s11 = demodulate(data),
             )
-            
 
+            
             # IQ_plot(demod_data = [demodulate(run2(sequence, plot=0,JPA_TD = True))],#,s11_plus],
-            # tags = ['s11'],# 'g+e superposition'],
-            # title = 'Squeeze check!',
+            # tags = ['g state JPA'],# 'g+e superposition'],
+            # title = 'g with and without JPA',
             # writer = writer
             # )
 finally:
