@@ -47,7 +47,7 @@ sequence_e_JPA.call(readout_seq_JPA)
 current_source.ramp_current(0, step=5e-7, delay=0)
 current_source.off()
 
-current=  101.3e-6
+current=  100.8e-6
 
 current_source.on()
 current_source.ramp_current(current,5e-7,0.1)
@@ -55,7 +55,7 @@ current_source.ramp_current(current,5e-7,0.1)
 JPA_current_source.ramp_current(0, step=5e-7, delay=0)
 JPA_current_source.off()
 
-current_JPA= 84e-6
+current_JPA= 90.7e-6
 
 JPA_current_source.on()
 JPA_current_source.ramp_current(current_JPA,5e-7,0.1)

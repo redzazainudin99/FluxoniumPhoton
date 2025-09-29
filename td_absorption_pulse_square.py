@@ -8,34 +8,48 @@ from sequence_parser import Sequence, Variable, Variables
 from tqdm import tqdm
 
 from setup_td import *
+from ReverseExpPulse import *
 
 with open(__file__) as file:
     script = file.read()
 
 measurement_name = os.path.basename(__file__)
 
-amplitude = Variable("amplitude", np.linspace(0.,1.4,101), "V")
+
+
+delay = Variable("delay",20*np.arange(200) + 10, "ns")
 # duration = Variable("duration",[10,90,100,170], "ns")
-variables = Variables([amplitude])
+variables = Variables([delay])
 
-# ge_flat_pi.params["duration"] = duration
-ge_pi.params["amplitude"] = amplitude
-# JPA_phase.params['phase'] = 0.33*np.pi# phase
 
-sequence = Sequence([readout_port, ge_drive_port, JPA_port, digi_port])
-for _ in range(2):
-    sequence.call(ge_flat_seq)
-sequence.trigger([readout_port, ge_drive_port,JPA_port ,digi_port])
+
+gf_pi_flat.params['top_duration'] = 1200
+sequence = Sequence([readout_port, ge_drive_port, gf_drive_port, JPA_port, digi_port])
+
+
+# sequence.call(ge_flat_seq)
+sequence.trigger([readout_port, ge_drive_port,gf_drive_port, JPA_port ,digi_port])
+
+#single photon and absorption pulse here
+sequence.add(Square(amplitude = 0.1, duration=2400), readout_port,copy=False)
+sequence.add(Delay(delay),gf_drive_port, copy = False)
+sequence.call(gf_pi_seq)
+
+sequence.trigger([readout_port, gf_drive_port, ge_drive_port, JPA_port ,digi_port])
 sequence.call(readout_seq_JPA)
+# sequence.add(Delay(delay),gf_drive_port, copy = False)
 
 # check_sequence(sequence, variables, idxlist=[1,-1])
 # raise SystemError
+
+
+
 
 #Current set!
 current_source.ramp_current(0, step=5e-7, delay=0)
 current_source.off()
 
-current = 100.8e-6
+current=28.88e-6
 
 current_source.on()
 current_source.ramp_current(current,5e-7,0.1)
@@ -45,16 +59,18 @@ current_source.ramp_current(current,5e-7,0.1)
 JPA_current_source.ramp_current(0, step=5e-7, delay=0)
 JPA_current_source.off()
 
-current_JPA= 90.7e-6
+current_JPA=-94.8e-6
 
 JPA_current_source.on()
 JPA_current_source.ramp_current(current_JPA,5e-7,0.1)
 
 
 
+
+
 data = DataDict(
-    amplitude=dict(unit="V"),
-    s11=dict(axes=["amplitude"])
+    delay=dict(unit="ns"),
+    s11=dict(axes=["delay"])
 )
 data.validate() 
 
@@ -67,11 +83,12 @@ try:
         writer.save_dict("station_snapshot.json", station.snapshot())
         for update_command in tqdm(variables.update_command_list):         
             sequence.update_variables(update_command)
-            load_sequence2(sequence, cycles=30000)
+            load_sequence2(sequence, cycles=40000)
+            # load_sequence_append(reversed_photon,readout_port,sequence, cycles=40000) 
             data = run2(sequence, JPA_TD=True).mean(axis=0)
             s11 = demodulate(data)
             writer.add_data(
-                amplitude = sequence.variable_dict["amplitude"][0].value,
+                delay = sequence.variable_dict["delay"][0].value,
                 s11 = s11,
             )
 

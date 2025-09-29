@@ -14,35 +14,30 @@ with open(__file__) as file:
 
 measurement_name = os.path.basename(__file__)
 
-freq_vals = np.linspace(0.26,0.34,101)
-# freq_vals = np.linspace(0.1,0.3,2)
+delay = Variable("delay",50 * np.arange(50), "ns")
+# duration = Variable("duration",[10,90,100,170], "ns")
+variables = Variables([delay])
 
-delay = 7000
+detuning = 0.002
 
-# sequence = Sequence([readout_port, ge_drive_port, JPA_port, digi_port])
-# # sequence.trigger([readout_port, ge_drive_port,JPA_port, digi_port])
-# sequence.add(Square(amplitude=0.5,duration= 8000),ge_drive_port,copy=False)
-# sequence.trigger([readout_port, ge_drive_port, digi_port,JPA_port])
-# # sequence.add(Square(amplitude=1., duration=15000), JPA_port)
-# sequence.call(JPA_square_seq)
-# sequence.call(readout_seq)
-# # sequence.add(Delay(duration= delay), readout_port)
 
-sequence = Sequence([readout_port, ge_drive_port, JPA_port, digi_port])
-# sequence.trigger([readout_port, ge_drive_port,JPA_port, digi_port])
-sequence.add(Square(amplitude=0.2,duration= 15000),ge_drive_port,copy=False)
-sequence.trigger([readout_port, ge_drive_port, digi_port,JPA_port])
-# sequence.add(Square(amplitude=1., duration=15000), JPA_port)
-# sequence.call(JPA_square_seq)
-sequence.call(readout_seq_JPA)
-# sequence.add(Delay(duration= delay), readout_port)
+seq = Sequence(port_list=[ge_drive_port, readout_port, digi_port])
+seq.add(SetDetuning(detuning), ge_drive_port)
+seq.call(ge_flat_halfpi_seq)
+seq.add(Delay(delay), ge_drive_port)
+seq.add(VirtualZ(np.pi), ge_drive_port)
+seq.call(ge_half_pi_seq)
+seq.add(VirtualZ(np.pi), ge_drive_port)
+seq.trigger([ge_drive_port, readout_port, digi_port])
+seq.call(readout_seq_JPA)
+
 
 # sequence.draw()
 # raise SystemError
 
 data = DataDict(
-    frequency=dict(unit="Hz"),
-    s11=dict(axes=["frequency"])
+    delay=dict(unit="ns"),
+    s11=dict(axes=["delay"])
 )
 data.validate()
 
@@ -53,7 +48,7 @@ data.validate()
 current_source.ramp_current(0, step=5e-7, delay=0)
 current_source.off()
 
-current=100.8e-6
+current=28.88e-6
 
 current_source.on()
 current_source.ramp_current(current,5e-7,0.1)
@@ -66,7 +61,7 @@ ge_lo_freq=0
 JPA_current_source.ramp_current(0, step=5e-7, delay=0)
 JPA_current_source.off()
 
-current_JPA=90.7e-6
+current_JPA=-94.8e-6
 
 JPA_current_source.on()
 JPA_current_source.ramp_current(current_JPA,5e-7,0.1)
@@ -91,13 +86,12 @@ try:
         writer.save_text("wiring.md", wiring)
         writer.save_dict("station_snapshot.json", station.snapshot())
         digi_ch.delay(0)
-        for f in tqdm(freq_vals):         
-            ge_drive_port.if_freq = f
-            # print(ge_drive_port.if_freq)
-            load_sequence2(sequence, cycles=30000)
-            data = run2(sequence, plot=0,JPA_TD = True).mean(axis=0)
+        for update_command in tqdm(variables.update_command_list):             
+            seq.update_variables(update_command)
+            load_sequence2(seq, cycles=40000)
+            data = run2(seq, plot=0,JPA_TD = True).mean(axis=0)
             writer.add_data(
-                frequency = f,
+                delay = seq.variable_dict["delay"][0].value,
                 s11 = demodulate(data),
             )
             

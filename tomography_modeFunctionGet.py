@@ -30,10 +30,10 @@ def photon_sequence (virtualz, phase, draw_end = False):
     sequence.call(gf_pi_seq)
 
     sequence.add(ResetPhase(phase = phase), JPA_port,copy = False)   
-    sequence.add(JPA_pulse, JPA_port, copy=False)   
+    sequence.add(JPA_pulse_tomo, JPA_port, copy=False)   
 
     # sequence.add(Delay(400), digi_port, copy=False)   
-    sequence.add(digi_acquire, digi_port, copy=False)  
+    sequence.add(digi_acquire_tomo, digi_port, copy=False)  
 
     if draw_end == True:
         sequence.draw()

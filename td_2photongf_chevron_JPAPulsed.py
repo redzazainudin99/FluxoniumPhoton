@@ -10,10 +10,10 @@ from setup_td import *
 
 measurement_name = os.path.basename(__file__)[:-3]
 
-frequency = np.linspace(gf_lo_freq - 0.2, gf_lo_freq + 0.29,41) #GHz
+frequency = np.linspace(gf_lo_freq - 0.2, gf_lo_freq + 0.29,51) #GHz
 # frequency = np.linspace(0.4, 0.65, 101) #GHz
 
-amp_vals = np.linspace(0,1.4,31 )
+amp_vals = np.linspace(0,1.4,11 )
 amplitude = Variable("amplitude", amp_vals, "V")
 # print(digi_ch.sampling_interval())
 

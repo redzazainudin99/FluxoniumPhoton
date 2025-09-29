@@ -29,7 +29,7 @@ def Fido(datetime, name):          #Fido gets your raw _data for you!
 
 
 
-foldernamePhoton, datadict_Photon  = Fido("2025-09-24T193301", "tomography_modeFunctionGet")
+foldernamePhoton, datadict_Photon  = Fido("2025-09-26T215145", "tomography_modeFunctionGet")
 
 #Defining variables
 signal = datadict_Photon['waveform']['values']
